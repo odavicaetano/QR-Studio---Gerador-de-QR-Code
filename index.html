@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>QR Studio • Davi Caetano | Gerador de QR Code Personalizado</title>
+<meta name="description" content="Crie QR Codes personalizados com cores, estilos, logotipo e exportação gratuita em SVG, PNG e JPEG." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231C2220'/%3E%3Cpath fill='%2310B981' d='M6 6h8v8H6V6zm2 2v4h4V8H8zm10-2h8v8h-8V6zm2 2v4h4V8h-4zM6 18h8v8H6v-8zm2 2v4h4v-4H8zm10-2h3v3h-3v-3zm5 0h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3zm-2.5-2.5h3v3h-3v-3z'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
+  colors: { bgBase:'#141817', cardBase:'#1C2220', surfaceBase:'#242B28', surfaceHover:'#2C3531', borderSubtle:'#2F3834',
+            emeraldMain:'#10B981', emeraldLight:'#34D399', emeraldDark:'#059669' }
+}}};
+</script>
+<style>
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:#141817;color:#F3F6F5;font-family:'Inter',system-ui,sans-serif;margin:0;-webkit-font-smoothing:antialiased;position:relative}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60rem 30rem at 85% -10%,rgba(16,185,129,.12),transparent 60%),
+             radial-gradient(40rem 24rem at -10% 110%,rgba(16,185,129,.07),transparent 60%)}
+
+@keyframes down{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes reveal{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.anim-header{animation:down .45s cubic-bezier(.22,1,.36,1) both}
+.anim-card-1{animation:up .5s cubic-bezier(.22,1,.36,1) .08s both}
+.anim-card-2{animation:up .5s cubic-bezier(.22,1,.36,1) .16s both}
+.anim-card-3{animation:up .5s cubic-bezier(.22,1,.36,1) .24s both}
+.anim-preview{animation:up .55s cubic-bezier(.22,1,.36,1) .12s both}
+.anim-stage{animation:reveal .6s cubic-bezier(.22,1,.36,1) .2s both}
+
+/* Selo "Ao vivo": estático; só anima enquanto atualiza */
+.live{display:inline-flex;align-items:center;gap:7px;padding:3px 10px 3px 9px;border-radius:999px;background:rgba(36,43,40,.7);font-size:11px;font-weight:500;color:#9CA3AF;transition:color .25s,background .25s}
+.live-dot{position:relative;width:7px;height:7px;border-radius:50%;background:#10B981;flex:none;transition:background .25s}
+.live.sync{color:#FDE68A;background:rgba(251,191,36,.08)}
+.live.sync .live-dot{background:#FBBF24}
+.live.sync .live-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;animation:ping .8s cubic-bezier(0,0,.2,1) infinite}
+@keyframes ping{0%{transform:scale(1);opacity:.7}80%,100%{transform:scale(2.6);opacity:0}}
+
+.checkerboard{background-color:#E2E8E5;background-image:linear-gradient(45deg,#CBD5D1 25%,transparent 25%),linear-gradient(-45deg,#CBD5D1 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#CBD5D1 75%),linear-gradient(-45deg,transparent 75%,#CBD5D1 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.stage-wrap{position:relative;border-radius:22px;padding:5px;background:linear-gradient(145deg,rgba(16,185,129,.28),rgba(47,56,52,.5) 45%,rgba(16,185,129,.08));box-shadow:0 18px 44px -24px rgba(16,185,129,.3)}
+
+.card{background:linear-gradient(180deg,rgba(36,43,40,.3),rgba(28,34,32,1) 120px);border:1px solid #2A322F;border-radius:1rem}
+.inp{width:100%;background:#242B28;border:1px solid #2F3834;border-radius:.75rem;padding:.625rem 2.5rem .625rem .875rem;font-size:.875rem;color:#fff;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
+.inp::placeholder{color:#6B7580}
+.inp:hover{background:#28302D}
+.inp:focus{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.16)}
+.sel{width:100%;background:#242B28;border:1px solid #2F3834;border-radius:.75rem;padding:.6rem .75rem;font-size:.75rem;font-weight:500;color:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+.sel:focus{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.16)}
+button:focus-visible,[role=slider]:focus-visible{outline:2px solid #10B981;outline-offset:2px}
+button:disabled{opacity:.55;cursor:wait}
+
+#custom-color-picker{box-shadow:0 24px 60px rgba(0,0,0,.55)}
+#picker-hue{background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);height:11px}
+#picker-hue::-webkit-slider-thumb{border:2px solid #fff;background:#1C2220;width:17px;height:17px}
+#picker-hue::-moz-range-thumb{border:2px solid #fff;background:#1C2220;width:17px;height:17px}
+#qr-container{position:relative;height:auto;aspect-ratio:var(--ar,1);isolation:isolate;width:min(100%, calc(50vh * var(--ar,1)));width:min(100%, calc(50svh * var(--ar,1)))}
+#qr-container img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity 260ms cubic-bezier(.22,1,.36,1);will-change:opacity}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;background:#2C3531;border-radius:999px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#10B981;border:2px solid #1C2220;cursor:pointer;transition:transform .15s,background-color .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.12);background:#34D399}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#10B981;border:2px solid #1C2220;cursor:pointer}
+/* Composição: modelos, segmentados e chaves */
+.preset-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 9px;border-radius:.75rem;background:#242B28;border:1px solid #2F3834;color:#D1D5DB;font-size:11px;font-weight:500;transition:border-color .2s,background .2s,color .2s,box-shadow .2s,transform .15s}
+.preset-btn:hover{background:#2C3531;border-color:rgba(16,185,129,.45);color:#fff}
+.preset-btn:active{transform:scale(.98)}
+.preset-btn svg{width:30px;height:36px;color:#6B7580;transition:color .2s}
+.preset-btn[aria-pressed="true"]{border-color:#10B981;background:rgba(16,185,129,.1);color:#fff;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+.preset-btn[aria-pressed="true"] svg,.preset-btn:hover svg{color:#34D399}
+.seg{display:grid;gap:4px;background:rgba(20,24,23,.7);padding:4px;border:1px solid #2F3834;border-radius:.75rem}
+.seg button{display:flex;align-items:center;justify-content:center;gap:6px;padding:.42rem .5rem;border-radius:.5rem;font-size:11px;font-weight:500;color:#D1D5DB;transition:background .2s,color .2s}
+.seg button:hover{color:#fff;background:#242B28}
+.seg button[aria-pressed="true"]{background:#10B981;color:#030712}
+.switch{position:relative;width:38px;height:22px;border-radius:999px;background:#2C3531;border:1px solid #3B4741;transition:background .2s,border-color .2s;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#9CA3AF;transition:transform .2s cubic-bezier(.22,1,.36,1),background .2s}
+.switch[aria-checked="true"]{background:#10B981;border-color:#10B981}
+.switch[aria-checked="true"]::after{transform:translateX(16px);background:#fff}
+.switch:disabled{opacity:.4;cursor:not-allowed}
+.counter{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B7580;pointer-events:none}
+/* Tipografia e blocos simples (sem cards aninhados) */
+.sec-title{white-space:nowrap;display:flex;align-items:center;gap:.5rem;font-size:.875rem;font-weight:600;color:#fff;letter-spacing:.01em}
+.sec-title svg{color:#8A949E}
+.lbl{display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:500;color:#D1D5DB;margin-bottom:.4rem}
+.lbl svg{width:14px;height:14px;color:#8A949E;flex:none}
+.lbl.mb-0{margin-bottom:0}
+.val{font-family:'JetBrains Mono',monospace;font-size:11px;color:#9CA3AF}
+.color-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:.75rem;background:rgba(36,43,40,.55);min-width:0}
+.swatch{position:relative;width:36px;height:36px;border-radius:.6rem;border:1px solid rgba(255,255,255,.18);overflow:hidden;flex:none;transition:transform .15s}
+.swatch:hover{transform:scale(1.05)}
+.hex{width:5.5rem;max-width:100%;background:transparent;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:#fff;text-transform:uppercase;outline:none;padding:0}
+.hex:focus{color:#34D399}
+.hex:disabled{opacity:.45}
+.mini-check{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:10.5px;color:#9CA3AF;cursor:pointer;user-select:none;white-space:nowrap}
+.upload{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;padding:.65rem 1rem;border-radius:.75rem;border:1px dashed #3B4741;background:rgba(36,43,40,.45);font-size:12px;font-weight:500;color:#D1D5DB;cursor:pointer;transition:border-color .2s,background .2s}
+.upload:hover,.upload:focus-within{border-color:#10B981;background:rgba(36,43,40,.8)}
+.icon-btn{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:.6rem;color:#9CA3AF;transition:background .2s,color .2s}
+.icon-btn:hover{background:#2C3531;color:#fff}
+.warn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border-radius:.75rem;background:rgba(245,158,11,.08);color:#FCD34D;font-size:11.5px;line-height:1.4}
+.warn.hidden{display:none}
+.pal-chip{position:relative;width:100%;max-width:40px;aspect-ratio:1;border-radius:999px;padding:3px;border:1.5px solid transparent;transition:border-color .2s,transform .15s}
+.pal-chip:hover{transform:scale(1.08)}
+.pal-chip>span{display:block;width:100%;height:100%;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.pal-chip[aria-checked="true"]{border-color:#10B981}
+
+/* Painéis recolhíveis (um aberto por vez) */
+.adv{border-radius:.75rem;background:rgba(20,24,23,.45)}
+.adv-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:.7rem .85rem;border-radius:.75rem;font-size:12.5px;font-weight:500;color:#D1D5DB;transition:color .2s,background .2s}
+.adv-toggle:hover{color:#fff;background:rgba(36,43,40,.6)}
+.adv-toggle svg{color:#8A949E;transition:color .2s}
+.adv[data-open="true"] .adv-toggle svg{color:#34D399}
+.adv-toggle .adv-chev{transition:transform .3s cubic-bezier(.22,1,.36,1),color .2s}
+.adv[data-open="true"] .adv-chev{transform:rotate(180deg)}
+.adv-dot{display:none;width:6px;height:6px;border-radius:50%;background:#10B981;margin-left:2px}
+.adv[data-dirty="true"] .adv-dot{display:inline-block}
+.adv-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s cubic-bezier(.22,1,.36,1)}
+.adv[data-open="true"] .adv-body{grid-template-rows:1fr}
+.adv-inner{min-height:0;overflow:hidden;padding:0 .85rem;opacity:0;transition:opacity .25s,padding .32s}
+.adv[data-open="true"] .adv-inner{padding:.35rem .85rem 1rem;opacity:1}
+
+/* Miniatura flutuante no celular */
+.mini{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;width:92px;padding:6px;border-radius:16px;background:#1C2220;border:1px solid #3B4741;box-shadow:0 16px 40px -12px rgba(0,0,0,.75);opacity:0;transform:translateY(14px) scale(.94);pointer-events:none;transition:opacity .22s,transform .25s cubic-bezier(.22,1,.36,1)}
+.mini.is-visible{opacity:1;transform:none;pointer-events:auto}
+.mini-frame{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:var(--ar,1);max-height:124px;border-radius:10px;overflow:hidden;background-size:10px 10px}
+.mini-frame img{max-width:100%;max-height:100%;object-fit:contain}
+.mini-badge{position:absolute;top:-7px;left:-7px;width:22px;height:22px;border-radius:999px;background:#10B981;color:#030712;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+@media (min-width:1024px){.mini{display:none}}
+
+/* Prévia ampliada */
+.lb{position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));background:rgba(8,10,9,.8);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s}
+.lb[hidden]{display:none}
+.lb.is-open{opacity:1}
+.lb-panel{width:min(460px,100%);max-height:100%;overflow:auto;background:#1C2220;border:1px solid #2F3834;border-radius:1.25rem;padding:16px;transform:scale(.97);transition:transform .22s cubic-bezier(.22,1,.36,1)}
+.lb.is-open .lb-panel{transform:none}
+#lb-img{display:block;max-width:100%;max-height:min(60vh,560px);max-height:min(60svh,560px);margin:auto;object-fit:contain}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#141817}::-webkit-scrollbar-thumb{background:#2F3834;border-radius:999px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<header class="anim-header border-b border-borderSubtle bg-bgBase/80 backdrop-blur-md sticky top-0 z-30" style="top:env(safe-area-inset-top,0px)">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-[15px] sm:text-lg font-semibold tracking-tight text-white flex items-center gap-2 whitespace-nowrap">
+        <span>QR Studio</span><span class="text-emeraldMain font-bold">•</span><span class="text-gray-200 font-medium">Davi Caetano</span>
+      </h1>
+      <svg class="w-5 h-5 text-emeraldMain shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="13" r="3.5"/><circle cx="17.5" cy="13" r="3.5"/><path d="M10 13h4"/><path d="M3 13l1.2-4.5A2 2 0 0 1 6.1 7H7"/><path d="M21 13l-1.2-4.5A2 2 0 0 0 17.9 7H17"/></svg>
+    </div>
+    <button id="btn-reset" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 hover:text-white bg-surfaceBase hover:bg-surfaceHover border border-borderSubtle transition-colors" title="Restaurar configurações padrão" aria-label="Restaurar configurações padrão">
+      <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      <span class="hidden sm:inline">Restaurar Padrão</span>
+    </button>
+  </div>
+</header>
+
+<div id="toast" class="fixed z-[60] left-4 right-4 top-[76px] sm:top-auto sm:left-auto sm:right-5 sm:bottom-5 flex justify-center sm:justify-end pointer-events-none opacity-0 translate-y-2 transition-all duration-200" role="status" aria-live="polite">
+  <div class="bg-surfaceBase border border-borderSubtle text-gray-100 text-xs font-medium px-3.5 py-2.5 rounded-lg shadow-xl flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-emeraldMain"></span><span id="toast-msg">Ação concluída</span>
+  </div>
+</div>
+
+<main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-5 sm:pt-7 pb-36 lg:pb-12">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+
+    <!-- 1 · Conteúdo -->
+    <section class="anim-card-1 card p-4 sm:p-6 lg:col-span-7 lg:col-start-1 lg:row-start-1" aria-labelledby="t-content">
+      <div class="flex items-center justify-between mb-4 gap-3">
+        <h2 id="t-content" class="sec-title"><i data-icon="qr" class="w-4 h-4"></i>Conteúdo</h2>
+        <span id="live-badge" class="live" role="status" aria-live="off"><i class="live-dot"></i><span id="live-text">Ao vivo</span></span>
+      </div>
+      <div id="tabs" class="grid grid-cols-5 gap-1 bg-bgBase/70 p-1 rounded-xl mb-4" role="tablist" aria-label="Tipo de QR Code"></div>
+      <div id="panels"></div>
+    </section>
+
+    <!-- 2 · Prévia (no celular vem logo após o conteúdo; no desktop fica fixa à direita) -->
+    <aside class="anim-preview lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24" aria-label="Pré-visualização e exportação">
+      <section class="card p-4 sm:p-6 flex flex-col items-center">
+        <div class="w-full flex items-center justify-between mb-4 gap-2">
+          <span class="sec-title"><i data-icon="eye" class="w-4 h-4"></i>Pré-visualização</span>
+          <div class="flex items-center gap-1.5">
+            <span id="preview-badge" class="hidden min-[360px]:inline whitespace-nowrap text-[11px] font-mono px-2 py-0.5 rounded-full bg-surfaceBase text-gray-400">1024 × 1024 px</span>
+            <button id="btn-expand" type="button" class="icon-btn" aria-label="Ampliar pré-visualização" title="Ampliar"><i data-icon="maximize" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div id="stage" class="stage-wrap anim-stage w-full max-w-[250px] sm:max-w-[322px]">
+          <div class="w-full rounded-2xl checkerboard p-4 sm:p-5 flex items-center justify-center overflow-hidden">
+            <div id="qr-container" class="flex items-center justify-center"></div>
+          </div>
+        </div>
+        <p id="contrast-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>Contraste baixo: a câmera pode não ler.</p>
+        <p id="radius-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>O arredondamento está cortando os cantos do QR.</p>
+
+        <div class="w-full mt-5 pt-4 border-t border-borderSubtle">
+          <div class="flex items-center justify-between mb-3 gap-2">
+            <span class="sec-title text-[13px]"><i data-icon="download" class="w-4 h-4"></i>Exportar</span>
+            <span class="flex items-center gap-2">
+              <label for="export-size" class="text-[11px] text-gray-400">Largura</label>
+              <select id="export-size" class="bg-surfaceBase border border-borderSubtle focus:border-emeraldMain rounded-lg px-2 py-1 text-xs font-mono text-white outline-none">
+                <option value="512">512 px</option><option value="1024" selected>1024 px</option><option value="2048">2048 px</option>
+              </select>
+            </span>
+          </div>
+          <div class="grid grid-cols-3 gap-2.5" id="downloads"></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 3 · Personalização -->
+    <div class="lg:col-span-7 lg:col-start-1 lg:row-start-2 space-y-5">
+
+      <section class="anim-card-2 card p-4 sm:p-6 space-y-5" aria-labelledby="t-look">
+        <h2 id="t-look" class="sec-title"><i data-icon="palette" class="w-4 h-4"></i>Aparência</h2>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="lbl mb-0">Paleta</span>
+            <span id="palette-trigger-label" class="text-[11px] text-gray-400 truncate">Preto &amp; Branco (Padrão)</span>
+          </div>
+          <div id="palette-menu" class="grid grid-cols-8 gap-2" role="radiogroup" aria-label="Paletas rápidas"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="color-row">
+            <div id="swatch-dots" class="swatch" style="background:#000"><button id="color-dots" type="button" class="absolute inset-0 w-full h-full" aria-label="Escolher cor dos pontos" aria-expanded="false"></button></div>
+            <div class="min-w-0">
+              <span class="block text-[11px] text-gray-400">Pontos</span>
+              <input id="hex-dots" type="text" value="#000000" maxlength="7" spellcheck="false" aria-label="Código hexadecimal da cor dos pontos" class="hex" />
+            </div>
+          </div>
+          <div class="color-row">
+            <div id="swatch-bg" class="swatch" style="background:#fff"><button id="color-bg" type="button" class="absolute inset-0 w-full h-full" aria-label="Escolher cor do fundo" aria-expanded="false"></button></div>
+            <div class="min-w-0">
+              <span class="block text-[11px] text-gray-400">Fundo</span>
+              <input id="hex-bg" type="text" value="#FFFFFF" maxlength="7" spellcheck="false" aria-label="Código hexadecimal da cor de fundo" class="hex" />
+              <label class="mini-check"><input id="bg-transparent" type="checkbox" class="accent-emeraldMain w-3 h-3" /><span>Transparente</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="lbl mb-0"><i data-icon="image"></i>Logotipo</span>
+            <button id="btn-remove-logo" type="button" class="hidden inline-flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-300 font-medium transition-colors"><i data-icon="trash" class="w-3.5 h-3.5"></i><span>Remover</span></button>
+          </div>
+          <label class="upload">
+            <i data-icon="upload" class="w-4 h-4 shrink-0 text-gray-400"></i>
+            <span id="logo-filename" class="truncate">Enviar imagem (PNG, SVG, JPG, WebP)</span>
+            <input id="input-logo" type="file" accept="image/png, image/jpeg, image/svg+xml, image/webp" class="sr-only" />
+          </label>
+          <div id="logo-size-control" class="hidden mt-3">
+            <div class="flex items-center justify-between text-xs mb-2"><label for="logo-size" class="text-gray-300">Tamanho do logotipo</label><span id="logo-size-val" class="val">35%</span></div>
+            <input id="logo-size" type="range" min="0" max="100" step="1" value="35" aria-label="Tamanho do logotipo, de 0 a 100 por cento" />
+          </div>
+          <p id="logo-size-warning" class="hidden mt-2 text-[11px] text-amber-300" role="status">Logo grande pode impedir a leitura. Teste com a câmera.</p>
+        </div>
+
+        <div class="adv">
+          <button type="button" class="adv-toggle" aria-expanded="false" aria-controls="adv-look">
+            <span class="flex items-center gap-2"><i data-icon="sliders" class="w-4 h-4"></i>Ajustes avançados<span class="adv-dot" title="Alterado"></span></span>
+            <i data-icon="chevron" class="adv-chev w-4 h-4"></i>
+          </button>
+          <div id="adv-look" class="adv-body" role="region" aria-label="Ajustes avançados de aparência"><div class="adv-inner">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="style-dots" class="lbl"><i data-icon="grid"></i>Formato dos pontos</label>
+                <select id="style-dots" class="sel">
+                  <option value="square" selected>Quadrado (Padrão)</option><option value="rounded">Arredondado</option><option value="dots">Circular</option>
+                  <option value="classy">Elegante</option><option value="classy-rounded">Elegante Suave</option><option value="extra-rounded">Fluido</option>
+                </select>
+              </div>
+              <div>
+                <label for="style-corners" class="lbl"><i data-icon="scan"></i>Estilo dos cantos</label>
+                <select id="style-corners" class="sel">
+                  <option value="square" selected>Quadrado (Padrão)</option><option value="extra-rounded">Arredondado</option><option value="dot">Circular</option>
+                </select>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2.5">
+                  <label for="qr-margin" class="lbl mb-0" title="Área livre ao redor dos pontos"><i data-icon="square-dashed"></i>Respiro do QR</label>
+                  <span id="margin-val" class="val">12px</span>
+                </div>
+                <input id="qr-margin" type="range" min="0" max="40" step="2" value="12" />
+              </div>
+              <div>
+                <label for="qr-ecc" class="lbl"><i data-icon="shield"></i>Correção de erros</label>
+                <select id="qr-ecc" class="sel">
+                  <option value="L">Baixa (7%)</option><option value="M" selected>Média (15% - Padrão)</option>
+                  <option value="Q">Alta (25%)</option><option value="H">Máxima (30% - Ideal p/ Logo)</option>
+                </select>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </section>
+
+      <section class="anim-card-3 card p-4 sm:p-6 space-y-5" aria-labelledby="frame-title">
+        <h2 id="frame-title" class="sec-title"><i data-icon="frame" class="w-4 h-4"></i>Moldura &amp; texto</h2>
+
+        <div id="presets" class="grid grid-cols-4 gap-2" role="group" aria-label="Modelos de composição"></div>
+
+        <div class="adv">
+          <button type="button" class="adv-toggle" aria-expanded="false" aria-controls="adv-frame">
+            <span class="flex items-center gap-2"><i data-icon="sliders" class="w-4 h-4"></i>Ajustes da moldura<span class="adv-dot" title="Alterado"></span></span>
+            <i data-icon="chevron" class="adv-chev w-4 h-4"></i>
+          </button>
+          <div id="adv-frame" class="adv-body" role="region" aria-label="Ajustes da moldura"><div class="adv-inner space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <div class="flex items-center justify-between mb-2.5"><label for="frame-radius" class="lbl mb-0">Arredondamento</label><span id="radius-val" class="val">0%</span></div>
+                <input id="frame-radius" type="range" min="0" max="100" step="1" value="0" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2.5"><label for="frame-outer" class="lbl mb-0">Margem externa</label><span id="outer-val" class="val">0%</span></div>
+                <input id="frame-outer" type="range" min="0" max="20" step="1" value="0" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2.5"><label for="frame-bottom" class="lbl mb-0">Espaço inferior</label><span id="bottom-val" class="val">0%</span></div>
+                <input id="frame-bottom" type="range" min="0" max="40" step="1" value="0" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="color-row">
+                <div id="swatch-outer" class="swatch" style="background:#fff"><button id="color-outer" type="button" class="absolute inset-0 w-full h-full" aria-label="Escolher cor do fundo da margem" aria-expanded="false"></button></div>
+                <div class="min-w-0">
+                  <span class="block text-[11px] text-gray-400">Fundo da margem</span>
+                  <input id="hex-outer" type="text" value="#FFFFFF" maxlength="7" spellcheck="false" aria-label="Código hexadecimal do fundo da margem" class="hex" />
+                  <label class="mini-check"><input id="outer-transparent" type="checkbox" checked class="accent-emeraldMain w-3 h-3" /><span>Transparente</span></label>
+                </div>
+              </div>
+              <div class="color-row justify-between">
+                <div class="min-w-0">
+                  <span class="block text-xs text-gray-200">Sombra</span>
+                  <span id="shadow-hint" class="block text-[11px] text-gray-500 truncate">Use com margem externa</span>
+                </div>
+                <button id="frame-shadow" type="button" role="switch" aria-checked="false" aria-label="Sombra do cartão" class="switch"></button>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label for="caption-text" class="lbl"><i data-icon="type"></i>Legenda</label>
+            <div class="relative"><input id="caption-text" type="text" maxlength="90" placeholder="Ex.: Aponte a câmera" class="inp" /><span id="caption-count" class="counter">0/90</span></div>
+          </div>
+          <div>
+            <label for="brand-text" class="lbl"><i data-icon="pen"></i>Marca ou assinatura</label>
+            <div class="relative"><input id="brand-text" type="text" maxlength="48" placeholder="Ex.: Davi Caetano" class="inp" /><span id="brand-count" class="counter">0/48</span></div>
+          </div>
+        </div>
+
+        <div class="adv">
+          <button type="button" class="adv-toggle" aria-expanded="false" aria-controls="adv-text">
+            <span class="flex items-center gap-2"><i data-icon="sliders" class="w-4 h-4"></i>Personalizar texto<span class="adv-dot" title="Alterado"></span></span>
+            <i data-icon="chevron" class="adv-chev w-4 h-4"></i>
+          </button>
+          <div id="adv-text" class="adv-body" role="region" aria-label="Personalizar texto"><div class="adv-inner space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="caption-font" class="lbl">Fonte da legenda</label>
+                <select id="caption-font" class="sel">
+                  <option value="sans" selected>Moderna (sem serifa)</option><option value="serif">Clássica (serifada)</option>
+                  <option value="mono">Técnica (monoespaçada)</option><option value="hand">Manuscrita</option>
+                </select>
+              </div>
+              <div>
+                <label for="brand-style" class="lbl">Estilo da marca</label>
+                <select id="brand-style" class="sel">
+                  <option value="caps" selected>Discreta · caixa-alta</option><option value="sign">Assinatura manuscrita</option><option value="mono">Técnica · monoespaçada</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span class="lbl">Alinhamento</span>
+                <div class="seg grid-cols-3" data-seg="align" role="group" aria-label="Alinhamento do texto">
+                  <button type="button" data-value="start" aria-label="Alinhar à esquerda"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg><span>Esq.</span></button>
+                  <button type="button" data-value="middle" aria-label="Centralizar"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg><span>Centro</span></button>
+                  <button type="button" data-value="end" aria-label="Alinhar à direita"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M10 12h10M7 18h13"/></svg><span>Dir.</span></button>
+                </div>
+              </div>
+              <div>
+                <span class="lbl">Posição da marca</span>
+                <div class="seg grid-cols-2" data-seg="brandPos" role="group" aria-label="Posição da marca">
+                  <button type="button" data-value="stack"><span>Abaixo</span></button>
+                  <button type="button" data-value="inline"><span>Ao lado</span></button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-2.5"><label for="text-size" class="lbl mb-0">Tamanho do texto</label><span id="text-size-val" class="val">48</span></div>
+              <input id="text-size" type="range" min="30" max="80" step="1" value="48" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="color-row">
+                <div id="swatch-text" class="swatch" style="background:#000"><button id="color-text" type="button" class="absolute inset-0 w-full h-full" aria-label="Escolher cor do texto" aria-expanded="false"></button></div>
+                <div class="min-w-0">
+                  <span class="block text-[11px] text-gray-400">Cor do texto</span>
+                  <input id="hex-text" type="text" value="#000000" maxlength="7" spellcheck="false" aria-label="Código hexadecimal da cor do texto" class="hex" />
+                  <label class="mini-check"><input id="text-auto" type="checkbox" checked class="accent-emeraldMain w-3 h-3" /><span>Igual aos pontos</span></label>
+                </div>
+              </div>
+              <div class="color-row justify-between">
+                <div class="min-w-0">
+                  <span class="block text-xs text-gray-200">Linha divisória</span>
+                  <span id="divider-hint" class="block text-[11px] text-gray-500 truncate">Entre legenda e marca</span>
+                </div>
+                <button id="text-divider" type="button" role="switch" aria-checked="false" aria-label="Linha divisória entre legenda e marca" class="switch"></button>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Miniatura flutuante (só celular/tablet, quando a prévia principal sai da tela) -->
+<button id="mini-preview" type="button" class="mini" aria-label="Ampliar pré-visualização" aria-hidden="true" tabindex="-1">
+  <span class="mini-frame checkerboard"><img id="mini-img" alt="" /></span>
+  <span class="mini-badge" aria-hidden="true"><i data-icon="maximize" class="w-3 h-3"></i></span>
+</button>
+
+<!-- Prévia ampliada -->
+<div id="lightbox" class="lb" role="dialog" aria-modal="true" aria-labelledby="lb-title" hidden>
+  <div class="lb-panel">
+    <div class="flex items-center justify-between mb-3">
+      <span id="lb-title" class="sec-title"><i data-icon="eye" class="w-4 h-4"></i>Prévia ampliada</span>
+      <button id="lb-close" type="button" class="icon-btn" aria-label="Fechar prévia ampliada"><i data-icon="x" class="w-4 h-4"></i></button>
+    </div>
+    <div class="checkerboard rounded-xl p-4"><img id="lb-img" alt="Pré-visualização ampliada do QR Code" /></div>
+    <div id="lb-downloads" class="grid grid-cols-3 gap-2.5 mt-4"></div>
+  </div>
+</div>
+
+
+<div id="custom-color-picker" class="hidden fixed z-50 w-[min(300px,calc(100vw-24px))] bg-cardBase border border-borderSubtle rounded-2xl p-4" role="dialog" aria-label="Seletor de cores">
+  <div class="flex justify-between items-center mb-3">
+    <span class="text-xs font-semibold text-white">Selecionar cor</span>
+    <button id="picker-close" type="button" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-surfaceHover" aria-label="Fechar seletor"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div id="picker-sv" class="relative h-32 rounded-xl overflow-hidden cursor-crosshair select-none touch-none" role="slider" tabindex="0" aria-label="Saturação e brilho" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+    <div class="absolute inset-0" style="background:linear-gradient(to right,#fff,transparent)"></div>
+    <div class="absolute inset-0" style="background:linear-gradient(to top,#000,transparent)"></div>
+    <div id="picker-cursor" class="absolute w-3.5 h-3.5 border-2 border-white rounded-full shadow-md pointer-events-none" style="transform:translate(-50%,-50%);left:0;top:0"></div>
+  </div>
+  <label class="block mt-3 mb-1.5 text-[11px] text-gray-300" for="picker-hue">Matiz</label>
+  <input id="picker-hue" type="range" min="0" max="360" step="1" value="0" />
+  <div class="flex items-center gap-2 mt-3">
+    <div id="picker-preview" class="w-9 h-9 rounded-lg border border-white/20 shrink-0"></div>
+    <input id="picker-hex" type="text" maxlength="7" spellcheck="false" aria-label="Cor hexadecimal" class="flex-1 min-w-0 bg-surfaceBase border border-borderSubtle focus:border-emeraldMain rounded-lg px-3 py-2 font-mono text-xs text-white outline-none uppercase" />
+    <button id="picker-copy" type="button" class="bg-surfaceBase hover:bg-surfaceHover text-gray-300 hover:text-white border border-borderSubtle rounded-lg p-2" aria-label="Copiar código hexadecimal"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+  </div>
+  <div class="mt-3 grid grid-cols-8 gap-1.5" id="picker-presets"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+/* Ícones vetoriais no padrão Lucide (traço 2px, cantos arredondados) */
+const ICONS = {
+  qr:'<rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>',
+  eye:'<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  maximize:'<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  palette:'<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z"/>',
+  image:'<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  sliders:'<path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/>',
+  chevron:'<path d="m6 9 6 6 6-6"/>',
+  grid:'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>',
+  'square-dashed':'<path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/>',
+  shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  frame:'<path d="M22 6H2"/><path d="M22 18H2"/><path d="M6 2v20"/><path d="M18 2v20"/>',
+  type:'<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+  pen:'<path d="M12 20h9"/><path d="M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.86z"/>'
+};
+const svgIcon = (name, cls = 'w-4 h-4') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+document.querySelectorAll('i[data-icon]').forEach(el => { el.outerHTML = svgIcon(el.dataset.icon, el.className || 'w-4 h-4'); });
+
+const PALETTES = [
+  { id:'classic', name:'Preto & Branco (Padrão)', dots:'#000000', bg:'#FFFFFF' },
+  { id:'emerald', name:'Esmeralda & Branco', dots:'#065F46', bg:'#FFFFFF' },
+  { id:'slate', name:'Grafite & Gelo', dots:'#1E293B', bg:'#F8FAFC' },
+  { id:'terracotta', name:'Terracota & Creme', dots:'#9A3412', bg:'#FFFBEB' },
+  { id:'cobalt', name:'Azul Cobalto & Branco', dots:'#1D4ED8', bg:'#FFFFFF' },
+  { id:'burgundy', name:'Borgonha & Marfim', dots:'#881337', bg:'#FFF1F2' },
+  { id:'mint-dark', name:'Menta sobre Escuro', dots:'#34D399', bg:'#111816' },
+  { id:'gold-noir', name:'Ouro sobre Grafite', dots:'#FBBF24', bg:'#18181B' }
+];
+const DEFAULTS = { activeTab:'url', dotsColor:'#000000', bgColor:'#FFFFFF', bgTransparent:false, dotsType:'square', cornersType:'square', margin:12, ecc:'M', logoDataUrl:null, logoSize:0.35, exportSize:1024,
+  // Composição (cartão / polaroid / plaquinha)
+  radius:0, outerMargin:0, extraBottom:0, shadow:false, outerTransparent:true, outerColor:'#FFFFFF',
+  caption:'', brand:'', captionFont:'sans', brandStyle:'caps', align:'middle', brandPos:'stack', divider:false,
+  textSize:48, textAuto:true, textColor:'#000000' };
+/* Modelos: só ajustam o layout, nunca apagam textos ou cores */
+const PRESETS = {
+  simple:   { label:'Simples',   radius:0,  outerMargin:0, shadow:false, margin:12, extraBottom:0,  align:'middle', brandPos:'stack',  captionFont:'sans',  brandStyle:'caps', divider:false,
+              icon:'<rect x="6" y="10" width="28" height="28" rx="1.5"/><path d="M11 15h6v6h-6zM23 15h6v6h-6zM11 27h6v6h-6z"/>' },
+  card:     { label:'Cartão',    radius:45, outerMargin:6, shadow:true,  margin:16, extraBottom:0,  align:'start',  brandPos:'inline', captionFont:'sans',  brandStyle:'caps', divider:false,
+              icon:'<rect x="5" y="5" width="30" height="38" rx="6"/><path d="M11 11h7v7h-7zM22 11h7v7h-7zM11 22h7v7h-7z"/><path d="M11 36h11M27 36h2"/>' },
+  polaroid: { label:'Polaroid',  radius:5,  outerMargin:8, shadow:true,  margin:18, extraBottom:16, align:'middle', brandPos:'stack',  captionFont:'hand',  brandStyle:'caps', divider:false,
+              icon:'<rect x="6" y="3" width="28" height="42" rx="1.5"/><rect x="10" y="7" width="20" height="20" rx=".5"/><path d="M13 35c2-1.6 4 1.6 6 0s4 1.6 8 0"/>' },
+  plaque:   { label:'Plaquinha', radius:70, outerMargin:6, shadow:true,  margin:22, extraBottom:3,  align:'middle', brandPos:'stack',  captionFont:'serif', brandStyle:'caps', divider:true,
+              icon:'<rect x="5" y="4" width="30" height="40" rx="11"/><path d="M14 11h5v5h-5zM21 11h5v5h-5zM14 18h5v5h-5z"/><path d="M17 30h6M13 35h14"/>' }
+};
+const LAYOUT_KEYS = ['radius','outerMargin','shadow','margin','extraBottom','align','brandPos','captionFont','brandStyle','divider'];
+const state = { ...DEFAULTS };
+
+/* ---------- Construção da interface repetitiva ---------- */
+const ic = d => `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const TABS = [
+  ['url','Link',ic('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>')],
+  ['text','Texto',ic('<path d="M17 6.1H3"/><path d="M21 12.1H3"/><path d="M15.1 18H3"/>')],
+  ['wifi','Wi-Fi',ic('<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/>')],
+  ['whatsapp','WhatsApp',ic('<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>')],
+  ['vcard','Contato',ic('<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>')]
+];
+const PASTE_ICON = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>';
+const CHECK_ICON = '<svg class="w-4 h-4 text-emeraldMain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function field(id, label, ph, type = 'text') {
+  const area = type === 'textarea';
+  return `<div><label for="${id}" class="block text-xs font-medium text-gray-300 mb-1.5">${label}</label><div class="relative">
+    ${area ? `<textarea id="${id}" rows="3" placeholder="${ph}" class="inp resize-none"></textarea>` : `<input id="${id}" type="${type}" placeholder="${ph}" class="inp" />`}
+    <button type="button" data-paste-target="${id}" class="paste-btn absolute right-2 ${area ? 'top-2.5' : 'top-1/2 -translate-y-1/2'} p-1.5 rounded-lg text-gray-400 hover:text-emeraldMain hover:bg-surfaceHover transition-colors" title="Colar da área de transferência" aria-label="Colar em ${label}">${PASTE_ICON}</button></div></div>`;
+}
+const PANELS = {
+  url: field('input-url','Endereço do site (URL)','https://seusite.com.br','url'),
+  text: field('input-text','Mensagem ou texto livre','Digite ou cole seu texto aqui...','textarea'),
+  wifi: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${field('wifi-ssid','Nome da rede (SSID)','Nome do Wi-Fi')}${field('wifi-pass','Senha','Senha da rede')}</div>
+    <div class="flex flex-wrap items-center justify-between gap-3 pt-3">
+      <div class="flex items-center gap-2"><label for="wifi-enc" class="text-xs text-gray-300">Segurança:</label>
+        <select id="wifi-enc" class="bg-surfaceBase border border-borderSubtle focus:border-emeraldMain rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"><option value="WPA">WPA / WPA2</option><option value="WEP">WEP</option><option value="nopass">Sem senha</option></select></div>
+      <label class="inline-flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none"><input id="wifi-hidden" type="checkbox" class="rounded accent-emeraldMain" /><span>Rede oculta</span></label></div>`,
+  whatsapp: `<div class="space-y-3">${field('wa-phone','Número com DDI e DDD','5531999999999','tel')}${field('wa-msg','Mensagem inicial (opcional)','Olá! Gostaria de mais informações.')}</div>`,
+  vcard: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${field('vc-name','Nome completo','Nome e sobrenome')}${field('vc-phone','Telefone','+55 31 99999-9999','tel')}${field('vc-email','E-mail','contato@dominio.com.br','email')}${field('vc-org','Empresa / Cargo','Empresa ou profissão')}</div>`
+};
+$('tabs').innerHTML = TABS.map(([id, label, icon], i) =>
+  `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${i === 0}" data-tab="${id}" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors">${icon}<span>${label}</span></button>`).join('');
+$('panels').innerHTML = Object.entries(PANELS).map(([id, html]) => `<div id="panel-${id}" role="tabpanel" aria-labelledby="tab-${id}" class="tab-panel ${id === 'url' ? '' : 'hidden'}">${html}</div>`).join('');
+const DOWNLOADS_HTML = [['svg','bg-emeraldMain hover:bg-emeraldLight text-gray-950 shadow-sm shadow-emerald-900/40',''],['png','bg-surfaceBase hover:bg-surfaceHover text-white border border-borderSubtle hover:border-emeraldMain/50','text-gray-400'],['jpeg','bg-surfaceBase hover:bg-surfaceHover text-white border border-borderSubtle hover:border-emeraldMain/50','text-gray-400']].map(([f, cls, ico]) =>
+  `<button type="button" data-download="${f}" class="flex flex-col items-center justify-center gap-1 font-semibold py-2.5 px-3 rounded-xl transition-all active:scale-[0.98] hover:-translate-y-0.5 ${cls}"><svg class="w-4 h-4 ${ico}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span class="text-xs">${f.toUpperCase()}</span></button>`).join('');
+$('downloads').innerHTML = DOWNLOADS_HTML;
+$('lb-downloads').innerHTML = DOWNLOADS_HTML;
+
+const CONTENT_IDS = ['input-url','input-text','wifi-ssid','wifi-pass','wa-phone','wa-msg','vc-name','vc-phone','vc-email','vc-org'];
+
+/* ---------- Utilidades ---------- */
+let toastTimer;
+function showToast(message) {
+  $('toast-msg').textContent = message;
+  $('toast').classList.remove('opacity-0','translate-y-2');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.add('opacity-0','translate-y-2'), 2400);
+}
+const escapeWifi = v => String(v).replace(/([\\;,:"])/g, '\\$1');
+const escapeVCard = v => String(v).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+function normalizeUrl(v) {
+  if (!v) return v;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return v;          // já tem esquema (https:, mailto:, tel:...)
+  if (/^[^\s/]+\.[^\s/]{2,}(\/.*)?$/.test(v)) return 'https://' + v; // parece domínio
+  return v;
+}
+
+function getQRData() {
+  switch (state.activeTab) {
+    case 'url': return normalizeUrl($('input-url').value.trim()) || 'https://www.linkedin.com/in/davicaetanosilva/';
+    case 'text': return $('input-text').value.trim() || 'QR Studio • Davi Caetano';
+    case 'wifi': {
+      const ssid = $('wifi-ssid').value.trim(), pass = $('wifi-pass').value, enc = $('wifi-enc').value;
+      if (!ssid) return 'WIFI:T:WPA;S:MinhaRede;P:12345678;;';
+      return `WIFI:T:${enc};S:${escapeWifi(ssid)};${enc === 'nopass' ? '' : `P:${escapeWifi(pass)};`}${$('wifi-hidden').checked ? 'H:true;' : ''};`;
+    }
+    case 'whatsapp': {
+      let phone = $('wa-phone').value.replace(/\D/g, '');
+      const msg = $('wa-msg').value.trim();
+      if (!phone) return 'https://wa.me/5531999999999';
+      if (phone.length <= 11) phone = '55' + phone.replace(/^0+/, ''); // número brasileiro sem DDI
+      return msg ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/${phone}`;
+    }
+    case 'vcard': {
+      const name = $('vc-name').value.trim() || 'Davi Caetano';
+      const phone = $('vc-phone').value.trim(), email = $('vc-email').value.trim(), org = $('vc-org').value.trim();
+      return ['BEGIN:VCARD','VERSION:3.0',`FN:${escapeVCard(name)}`,org && `ORG:${escapeVCard(org)}`,phone && `TEL;TYPE=CELL:${escapeVCard(phone)}`,email && `EMAIL:${escapeVCard(email)}`,'END:VCARD'].filter(Boolean).join('\r\n');
+    }
+  }
+  return 'https://www.linkedin.com/in/davicaetanosilva/';
+}
+
+function hexToRgb(hex) {
+  const c = hex.replace('#','');
+  if (c.length !== 6) return { r:0, g:0, b:0 };
+  const n = parseInt(c, 16);
+  return { r:(n >> 16) & 255, g:(n >> 8) & 255, b:n & 255 };
+}
+function getLuminance({ r, g, b }) {
+  const [rs, gs, bs] = [r,g,b].map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+function checkContrast() {
+  const el = $('contrast-warning');
+  if (state.bgTransparent) return el.classList.add('hidden');
+  const l1 = getLuminance(hexToRgb(state.dotsColor)), l2 = getLuminance(hexToRgb(state.bgColor));
+  // Pontos mais claros que o fundo (QR invertido) também podem falhar em leitores antigos
+  const ratio = (Math.max(l1,l2) + 0.05) / (Math.min(l1,l2) + 0.05);
+  el.classList.toggle('hidden', ratio >= 2.5);
+}
+
+/* ---------- Selo "Atualização ao vivo" ---------- */
+const liveBadge = $('live-badge'), liveText = $('live-text');
+let liveTimer;
+function liveSyncing() {
+  clearTimeout(liveTimer);
+  liveBadge.classList.remove('done');
+  liveBadge.classList.add('sync');
+  liveText.textContent = 'Atualizando…';
+}
+function liveDone() {
+  clearTimeout(liveTimer);
+  liveTimer = setTimeout(() => {
+    liveBadge.classList.remove('sync');
+    liveText.textContent = 'Ao vivo';
+    void liveBadge.offsetWidth;
+    liveBadge.classList.add('done');
+  }, 220);
+}
+
+/* ---------- QR ---------- */
+const qrContainer = $('qr-container');
+const MARGIN_REF = 540;   // referência histórica do "Respiro do QR" (px numa prévia de 540 px)
+const PREVIEW_W = 800;    // largura da prévia renderizada (nítida em telas 2x)
+let previewVersion = 0, previewTimer, lastPreviewKey = '';
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function createQROptions(size, format = 'png') {
+  const scale = size / MARGIN_REF;
+  return {
+    width: size, height: size, type: format === 'svg' ? 'svg' : 'canvas', data: getQRData(),
+    margin: Math.round(state.margin * 2 * scale),
+    qrOptions: { errorCorrectionLevel: state.ecc },
+    dotsOptions: { color: state.dotsColor, type: state.dotsType },
+    cornersSquareOptions: { color: state.dotsColor, type: state.cornersType },
+    cornersDotOptions: { color: state.dotsColor, type: state.cornersType === 'dot' ? 'dot' : 'square' },
+    backgroundOptions: { color: 'rgba(0,0,0,0)' }, // o fundo agora é desenhado pelo cartão da composição
+    image: state.logoDataUrl && state.logoSize > 0 ? state.logoDataUrl : '',
+    imageOptions: { crossOrigin: 'anonymous', margin: Math.round(12 * scale), imageSize: state.logoSize, hideBackgroundDots: true }
+  };
+}
+
+/* ---------- Composição: cartão, polaroid, plaquinha ----------
+   Todo o layout é calculado num cartão de referência com 1000 unidades de largura e depois
+   escalado. Prévia, PNG, JPEG e SVG usam exatamente o mesmo layout (mesmas quebras de linha). */
+const REF = 1000, BRAND_ALPHA = 0.72, SHADOW_ALPHA = 0.26;
+const CAPTION_FONTS = {
+  sans:  { family:'Inter',            weight:600, fallback:'system-ui, sans-serif',  k:1 },
+  serif: { family:'Playfair Display', weight:600, fallback:'Georgia, serif',         k:1.04 },
+  mono:  { family:'JetBrains Mono',   weight:500, fallback:'ui-monospace, monospace', k:0.9 },
+  hand:  { family:'Caveat',           weight:600, fallback:'cursive',                k:1.35 }
+};
+const BRAND_STYLES = {
+  caps: { family:'Inter',          weight:600, fallback:'system-ui, sans-serif',  k:0.5,  upper:true, track:0.2 },
+  sign: { family:'Caveat',         weight:600, fallback:'cursive',                k:0.95, upper:false, track:0 },
+  mono: { family:'JetBrains Mono', weight:500, fallback:'ui-monospace, monospace', k:0.52, upper:false, track:0.04 }
+};
+const fontCss = (f, size) => `${f.weight} ${size}px "${f.family}", ${f.fallback}`;
+const measureCtx = document.createElement('canvas').getContext('2d');
+const currentColor = t => t === 'text' ? (state.textAuto ? state.dotsColor : state.textColor) : state[colorKey(t)];
+
+function textWidth(t, f, size) {
+  measureCtx.font = fontCss(f, size);
+  if (!f.track) return measureCtx.measureText(t).width;
+  const chars = [...t];
+  return chars.reduce((w, ch) => w + measureCtx.measureText(ch).width, 0) + f.track * size * Math.max(0, chars.length - 1);
+}
+function ellipsize(t, f, size, maxW) {
+  if (textWidth(t, f, size) <= maxW) return t;
+  const chars = [...t];
+  while (chars.length && textWidth(chars.join('').trimEnd() + '…', f, size) > maxW) chars.pop();
+  return chars.join('').trimEnd() + '…';
+}
+function wrapText(text, f, size, maxW, maxLines) {
+  const lines = []; let cur = '';
+  for (let w of text.split(' ').filter(Boolean)) {
+    while ([...w].length > 1 && textWidth(w, f, size) > maxW) { // palavra maior que a linha: quebra por caractere
+      let part = '';
+      for (const ch of w) { if (part && textWidth(part + ch, f, size) > maxW) break; part += ch; }
+      if (cur) { lines.push(cur); cur = ''; }
+      lines.push(part); w = w.slice(part.length);
+    }
+    const test = cur ? `${cur} ${w}` : w;
+    if (!cur || textWidth(test, f, size) <= maxW) cur = test; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) {
+    const rest = lines.slice(maxLines - 1).join(' ');
+    lines.length = maxLines - 1;
+    lines.push(ellipsize(rest, f, size, maxW));
+  }
+  return lines;
+}
+
+function computeLayout() {
+  const qrPad = state.margin * 2 * REF / MARGIN_REF;           // respiro do QR em unidades de referência
+  const inset = Math.max(qrPad, 64);                            // recuo lateral do texto
+  const maxW = REF - inset * 2;
+  const cf = CAPTION_FONTS[state.captionFont] || CAPTION_FONTS.sans;
+  const bf = BRAND_STYLES[state.brandStyle] || BRAND_STYLES.caps;
+  const cSize = state.textSize * cf.k, bSize = state.textSize * bf.k, cStep = cSize * 1.24;
+  const caption = state.caption.replace(/\s+/g, ' ').trim();
+  const brandRaw = state.brand.replace(/\s+/g, ' ').trim();
+  const brand = bf.upper ? brandRaw.toLocaleUpperCase('pt-BR') : brandRaw;
+  const anchorX = a => a === 'start' ? inset : a === 'end' ? REF - inset : REF / 2;
+  const items = []; let divider = null, y = REF;                // o QR ocupa o quadrado 0..REF do topo do cartão
+
+  if (caption || brand) {
+    y += Math.max(0, 44 - qrPad);
+    const pushCaption = (lines, anchor, x) => lines.forEach((t, i) =>
+      items.push({ text:t, f:cf, size:cSize, x, y: y + cSize * 0.9 + i * cStep, anchor, alpha:1 }));
+    if (caption && brand && state.brandPos === 'inline') {
+      const bText = ellipsize(brand, bf, bSize, maxW * 0.55);
+      const lines = wrapText(caption, cf, cSize, maxW - textWidth(bText, bf, bSize) - 36, 3);
+      pushCaption(lines, 'start', inset);
+      const lastBase = y + cSize * 0.9 + (lines.length - 1) * cStep;
+      items.push({ text:bText, f:bf, size:bSize, x:REF - inset, y:lastBase, anchor:'end', alpha:BRAND_ALPHA });
+      y = lastBase + cSize * 0.3;
+    } else {
+      if (caption) {
+        const lines = wrapText(caption, cf, cSize, maxW, 3);
+        pushCaption(lines, state.align, anchorX(state.align));
+        y += cSize * 0.9 + (lines.length - 1) * cStep + cSize * 0.3;
+      }
+      if (brand) {
+        if (caption && state.divider) {
+          y += cSize * 0.45;
+          const len = Math.min(maxW, 120);
+          const x1 = state.align === 'start' ? inset : state.align === 'end' ? REF - inset - len : (REF - len) / 2;
+          divider = { x1, x2: x1 + len, y };
+          y += cSize * 0.45;
+        } else if (caption) y += cSize * 0.3;
+        const base = y + bSize * 0.9;
+        items.push({ text:ellipsize(brand, bf, bSize, maxW), f:bf, size:bSize, x:anchorX(state.align), y:base, anchor:state.align, alpha:BRAND_ALPHA });
+        y = base + bSize * 0.3;
+      }
+    }
+    y += inset * 0.85;
+  }
+  y += state.extraBottom / 100 * REF;
+  return { items, divider, cardH: y };
+}
+
+function getGeometry(width, layout) {
+  const W = Math.round(width);
+  const m = Math.round(W * state.outerMargin / 100);
+  const cw = W - 2 * m, k = cw / REF;
+  const cardH = Math.round(layout.cardH * k);
+  return { W, H: cardH + 2 * m, m, cw, k, cardH, r: Math.min(state.radius * 2 * k, cw / 2, cardH / 2) };
+}
+const shadowSpec = g => ({ blur: g.cw * 0.05, dy: g.cw * 0.02 });
+
+function ensureFonts() {
+  if (!document.fonts || !document.fonts.load) return Promise.resolve();
+  const sample = (state.caption + state.brand + state.brand.toLocaleUpperCase('pt-BR')) || 'Aa';
+  const specs = [CAPTION_FONTS[state.captionFont], BRAND_STYLES[state.brandStyle]];
+  return Promise.all(specs.map(f => document.fonts.load(fontCss(f, 40), sample).catch(() => {})));
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function blobToImage(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
+  });
+}
+const canvasToBlob = (canvas, type, quality) => new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('Falha ao gerar imagem')), type, quality));
+
+function drawTextItem(ctx, it, g, color) {
+  const size = it.size * g.k, x = g.m + it.x * g.k, y = g.m + it.y * g.k;
+  ctx.font = fontCss(it.f, size); ctx.fillStyle = color; ctx.globalAlpha = it.alpha; ctx.textBaseline = 'alphabetic';
+  const track = (it.f.track || 0) * size;
+  if (!track) {
+    ctx.textAlign = it.anchor === 'start' ? 'left' : it.anchor === 'end' ? 'right' : 'center';
+    ctx.fillText(it.text, x, y);
+  } else { // espaçamento entre letras desenhado manualmente (compatível com todos os navegadores)
+    const chars = [...it.text], widths = chars.map(ch => ctx.measureText(ch).width);
+    const total = widths.reduce((a, b) => a + b, 0) + track * (chars.length - 1);
+    let cx = it.anchor === 'start' ? x : it.anchor === 'end' ? x - total : x - total / 2;
+    ctx.textAlign = 'left';
+    chars.forEach((ch, i) => { ctx.fillText(ch, cx, y); cx += widths[i] + track; });
+  }
+  ctx.globalAlpha = 1;
+}
+
+async function renderComposition(width, format = 'png') {
+  const layout = computeLayout(), g = getGeometry(width, layout);
+  const qrBlob = await new QRCodeStyling(createQROptions(g.cw, 'png')).getRawData('png');
+  if (!qrBlob) throw new Error('QR Code vazio');
+  const qrImg = await blobToImage(qrBlob);
+  const canvas = document.createElement('canvas');
+  canvas.width = g.W; canvas.height = g.H;
+  const ctx = canvas.getContext('2d'), jpeg = format === 'jpeg';
+  if (!state.outerTransparent || jpeg) { ctx.fillStyle = state.outerTransparent ? '#FFFFFF' : state.outerColor; ctx.fillRect(0, 0, g.W, g.H); }
+  const cardFill = state.bgTransparent ? (jpeg ? '#FFFFFF' : null) : state.bgColor;
+  if (cardFill) {
+    ctx.save();
+    if (state.shadow && g.m > 0) { const s = shadowSpec(g); ctx.shadowColor = `rgba(0,0,0,${SHADOW_ALPHA})`; ctx.shadowBlur = s.blur; ctx.shadowOffsetY = s.dy; }
+    roundRectPath(ctx, g.m, g.m, g.cw, g.cardH, g.r);
+    ctx.fillStyle = cardFill; ctx.fill();
+    ctx.restore();
+  }
+  ctx.save();
+  roundRectPath(ctx, g.m, g.m, g.cw, g.cardH, g.r); ctx.clip();
+  ctx.drawImage(qrImg, g.m, g.m, g.cw, g.cw);
+  const color = currentColor('text');
+  if (layout.divider) {
+    const d = layout.divider;
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.35; ctx.lineWidth = 2.5 * g.k; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(g.m + d.x1 * g.k, g.m + d.y * g.k); ctx.lineTo(g.m + d.x2 * g.k, g.m + d.y * g.k); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  layout.items.forEach(it => drawTextItem(ctx, it, g, color));
+  ctx.restore();
+  return { canvas, g };
+}
+
+/* SVG: fontes embutidas (apenas os caracteres usados) para o arquivo abrir igual em qualquer lugar */
+const FONT_MIME = { woff2:'font/woff2', woff:'font/woff', truetype:'font/ttf', opentype:'font/otf' };
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer); let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+async function embedFonts(items) {
+  const groups = new Map();
+  items.forEach(it => { const key = `${it.f.family}|${it.f.weight}`; groups.set(key, (groups.get(key) || '') + it.text); });
+  const parts = await Promise.all([...groups].map(async ([key, text]) => {
+    const [family, weight] = key.split('|');
+    const base = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}:wght@${weight}`;
+    try {
+      const res = await fetch(`${base}&text=${encodeURIComponent([...new Set(text)].join(''))}`);
+      if (!res.ok) throw new Error(res.status);
+      const faces = [...(await res.text()).matchAll(/src:\s*url\(['"]?([^'")]+)['"]?\)\s*format\(['"]?([\w-]+)['"]?\)/g)];
+      if (!faces.length) throw new Error('sem fontes');
+      const css = await Promise.all(faces.map(async ([, url, fmt]) => {
+        const buf = await (await fetch(url)).arrayBuffer();
+        return `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};src:url(data:${FONT_MIME[fmt] || 'font/woff2'};base64,${toBase64(buf)}) format('${fmt}');}`;
+      }));
+      return css.join('');
+    } catch (_) { return `@import url('${base}&display=swap');`; } // sem rede: referência externa
+  }));
+  return parts.sort((a, b) => b.startsWith('@import') - a.startsWith('@import')).join('');
+}
+const xmlEsc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const num = v => +v.toFixed(2);
+
+async function buildSVG(width) {
+  const layout = computeLayout(), g = getGeometry(width, layout);
+  const raw = await new QRCodeStyling(createQROptions(g.cw, 'svg')).getRawData('svg');
+  if (!raw) throw new Error('QR Code vazio');
+  const qrMarkup = (await raw.text()).replace(/<\?xml[^>]*\?>/i, '').trim().replace(/<svg\b/i, `<svg x="${g.m}" y="${g.m}"`);
+  const fonts = layout.items.length ? await embedFonts(layout.items) : '';
+  const color = currentColor('text');
+  const cardFill = state.bgTransparent ? null : state.bgColor;
+  const shadow = state.shadow && g.m > 0 && cardFill, s = shadowSpec(g);
+  const rect = `x="${g.m}" y="${g.m}" width="${g.cw}" height="${g.cardH}" rx="${num(g.r)}" ry="${num(g.r)}"`;
+  const texts = layout.items.map(it => {
+    const size = it.size * g.k, track = (it.f.track || 0) * size;
+    // o SVG soma o espaçamento também após a última letra: compensa para alinhar igual ao PNG
+    const x = g.m + it.x * g.k + (it.anchor === 'end' ? track : it.anchor === 'middle' ? track / 2 : 0);
+    return `<text x="${num(x)}" y="${num(g.m + it.y * g.k)}" font-family="'${it.f.family}', ${it.f.fallback}" font-weight="${it.f.weight}" font-size="${num(size)}"${track ? ` letter-spacing="${num(track)}"` : ''} text-anchor="${it.anchor}" fill="${color}"${it.alpha < 1 ? ` fill-opacity="${it.alpha}"` : ''} xml:space="preserve">${xmlEsc(it.text)}</text>`;
+  }).join('');
+  const d = layout.divider;
+  const divider = d ? `<line x1="${num(g.m + d.x1 * g.k)}" y1="${num(g.m + d.y * g.k)}" x2="${num(g.m + d.x2 * g.k)}" y2="${num(g.m + d.y * g.k)}" stroke="${color}" stroke-opacity="0.35" stroke-width="${num(2.5 * g.k)}" stroke-linecap="round"/>` : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${g.W}" height="${g.H}" viewBox="0 0 ${g.W} ${g.H}">
+<defs>${fonts ? `<style><![CDATA[${fonts}]]></style>` : ''}<clipPath id="qs-card-clip"><rect ${rect}/></clipPath>${shadow ? `<filter id="qs-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="${num(s.dy)}" stdDeviation="${num(s.blur / 2)}" flood-color="#000000" flood-opacity="${SHADOW_ALPHA}"/></filter>` : ''}</defs>
+${state.outerTransparent ? '' : `<rect width="${g.W}" height="${g.H}" fill="${state.outerColor}"/>`}${cardFill ? `<rect ${rect} fill="${cardFill}"${shadow ? ' filter="url(#qs-shadow)"' : ''}/>` : ''}
+<g clip-path="url(#qs-card-clip)">${qrMarkup}${divider}${texts}</g>
+</svg>`;
+}
+
+function updateBadge() {
+  const g = getGeometry(state.exportSize, computeLayout());
+  $('preview-badge').textContent = `${g.W} × ${g.H} px`;
+}
+
+async function renderPreview(version) {
+  let url;
+  try {
+    await ensureFonts();
+    if (version !== previewVersion) return;
+    const key = JSON.stringify([getQRData(), state, PREVIEW_W]);
+    if (key === lastPreviewKey) { liveDone(); return; }
+    const { canvas, g } = await renderComposition(PREVIEW_W, 'png');
+    if (version !== previewVersion) return;
+    const blob = await canvasToBlob(canvas, 'image/png');
+    if (version !== previewVersion) return;
+    url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.alt = 'Pré-visualização do QR Code';
+    img.decoding = 'async';
+    img.dataset.objectUrl = url;
+    img.src = url;
+    await img.decode();
+    if (version !== previewVersion) { URL.revokeObjectURL(url); return; }
+    const previous = [...qrContainer.querySelectorAll('img')];
+    const ar = (g.W / g.H).toFixed(4);
+    qrContainer.style.setProperty('--ar', ar);
+    $('mini-preview').style.setProperty('--ar', ar);
+    $('mini-img').src = url; $('lb-img').src = url;
+    qrContainer.appendChild(img);
+    lastPreviewKey = key;
+    void img.offsetWidth;
+    requestAnimationFrame(() => { img.style.opacity = '1'; previous.forEach(o => o.style.opacity = '0'); });
+    setTimeout(() => previous.forEach(o => { o.remove(); URL.revokeObjectURL(o.dataset.objectUrl); }), reduceMotion() ? 0 : 320);
+    updateBadge();
+    liveDone();
+  } catch (error) {
+    if (url) URL.revokeObjectURL(url);
+    if (version === previewVersion) {
+      console.error('Erro ao renderizar QR Code:', error);
+      showToast('Não foi possível atualizar a prévia');
+      liveBadge.classList.remove('sync'); liveText.textContent = 'Ao vivo';
+    }
+  }
+}
+function scheduleQRUpdate(delay = 90) {
+  clearTimeout(previewTimer);
+  const version = ++previewVersion;
+  liveSyncing();
+  previewTimer = setTimeout(() => renderPreview(version), delay);
+  checkContrast();
+  markDirty();
+}
+const updateQR = () => scheduleQRUpdate(0);
+
+/* ---------- Cores e paletas ---------- */
+const paletteMenu = $('palette-menu');
+function syncColorUI() {
+  $('hex-dots').value = state.dotsColor.toUpperCase();
+  $('swatch-dots').style.backgroundColor = state.dotsColor;
+  $('hex-bg').value = state.bgColor.toUpperCase();
+  $('swatch-bg').style.backgroundColor = state.bgColor;
+  $('bg-transparent').checked = state.bgTransparent;
+  $('swatch-bg').classList.toggle('opacity-40', state.bgTransparent);
+  $('hex-bg').disabled = state.bgTransparent;
+  const tc = currentColor('text');
+  $('hex-text').value = tc.toUpperCase();
+  $('swatch-text').style.backgroundColor = tc;
+  $('text-auto').checked = state.textAuto;
+  $('hex-outer').value = state.outerColor.toUpperCase();
+  $('swatch-outer').style.backgroundColor = state.outerColor;
+  $('outer-transparent').checked = state.outerTransparent;
+  $('swatch-outer').classList.toggle('opacity-40', state.outerTransparent);
+  $('hex-outer').disabled = state.outerTransparent;
+}
+const samePalette = p => p.dots.toUpperCase() === state.dotsColor.toUpperCase() && p.bg.toUpperCase() === state.bgColor.toUpperCase() && !state.bgTransparent;
+/* Paletas sempre visíveis, como amostras (sem menu suspenso) */
+function renderPaletteOptions() {
+  paletteMenu.innerHTML = PALETTES.map(p => `
+    <button type="button" role="radio" aria-checked="${samePalette(p)}" data-palette-id="${p.id}" class="pal-chip" title="${p.name}" aria-label="${p.name}">
+      <span style="background:linear-gradient(135deg, ${p.dots} 0 50%, ${p.bg} 50% 100%)"></span></button>`).join('');
+}
+const closePaletteMenu = () => {};
+paletteMenu.addEventListener('click', e => {
+  const btn = e.target.closest('[data-palette-id]');
+  const found = btn && PALETTES.find(p => p.id === btn.dataset.paletteId);
+  if (!found) return;
+  state.dotsColor = found.dots; state.bgColor = found.bg; state.bgTransparent = false;
+  syncColorUI(); markCustomPaletteLabel(); updateQR();
+  const again = paletteMenu.querySelector(`[data-palette-id="${found.id}"]`); if (again) again.focus();
+});
+function markCustomPaletteLabel() {
+  const match = PALETTES.find(samePalette);
+  $('palette-trigger-label').textContent = match ? match.name : 'Personalizada';
+  renderPaletteOptions();
+}
+
+/* ---------- Abas e campos ---------- */
+function setTab(id) {
+  state.activeTab = id;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const on = b.dataset.tab === id;
+    b.setAttribute('aria-selected', on);
+    b.classList.toggle('bg-emeraldMain', on); b.classList.toggle('text-gray-950', on); b.classList.toggle('shadow-sm', on);
+    b.classList.toggle('text-gray-300', !on); b.classList.toggle('hover:text-white', !on); b.classList.toggle('hover:bg-surfaceBase', !on);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== `panel-${id}`));
+}
+document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => { setTab(btn.dataset.tab); updateQR(); }));
+$('tabs').addEventListener('keydown', e => {
+  const tabs = [...document.querySelectorAll('.tab-btn')], i = tabs.indexOf(document.activeElement);
+  if (i < 0 || !['ArrowRight','ArrowLeft'].includes(e.key)) return;
+  const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+  next.focus(); next.click(); e.preventDefault();
+});
+CONTENT_IDS.forEach(id => $(id).addEventListener('input', () => scheduleQRUpdate(160)));
+$('wifi-enc').addEventListener('change', updateQR);
+$('wifi-hidden').addEventListener('change', updateQR);
+
+document.querySelectorAll('.paste-btn').forEach(btn => btn.addEventListener('click', async () => {
+  const input = $(btn.dataset.pasteTarget);
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) return showToast('Área de transferência vazia');
+    input.value = text.trim(); input.focus(); updateQR();
+    btn.innerHTML = CHECK_ICON;
+    setTimeout(() => btn.innerHTML = PASTE_ICON, 1400);
+  } catch (_) { input.focus(); showToast('Use Ctrl+V (ou Cmd+V) para colar no campo'); }
+}));
+
+/* ---------- Seletor de cores ---------- */
+const picker = $('custom-color-picker'), pickerSV = $('picker-sv'), pickerHue = $('picker-hue'), pickerCursor = $('picker-cursor'), pickerHex = $('picker-hex'), pickerPreview = $('picker-preview');
+let pickerTarget = null, pickerHSV = { h:0, s:0, v:0 }, lastWidth = innerWidth;
+const COLOR_TARGETS = ['dots','bg','text','outer'];
+const colorKey = t => ({ dots:'dotsColor', bg:'bgColor', text:'textColor', outer:'outerColor' })[t];
+function releaseAuto(t) { // escolher uma cor desliga "transparente" / "igual aos pontos"
+  if (t === 'bg') state.bgTransparent = false;
+  if (t === 'outer') state.outerTransparent = false;
+  if (t === 'text') state.textAuto = false;
+}
+function hsvToHex({ h, s, v }) {
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+  const p = h < 60 ? [c,x,0] : h < 120 ? [x,c,0] : h < 180 ? [0,c,x] : h < 240 ? [0,x,c] : h < 300 ? [x,0,c] : [c,0,x];
+  return '#' + p.map(k => Math.round((k + m) * 255).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+function hexToHsv(hex) {
+  const { r, g, b } = hexToRgb(hex), [rr,gg,bb] = [r,g,b].map(x => x / 255);
+  const max = Math.max(rr,gg,bb), min = Math.min(rr,gg,bb), d = max - min;
+  let h = 0;
+  if (d) { h = max === rr ? ((gg - bb) / d) % 6 : max === gg ? (bb - rr) / d + 2 : (rr - gg) / d + 4; h = (h * 60 + 360) % 360; }
+  return { h, s: max ? d / max : 0, v: max };
+}
+function redrawPicker() {
+  pickerSV.style.backgroundColor = `hsl(${pickerHSV.h} 100% 50%)`;
+  pickerHue.value = String(Math.round(pickerHSV.h));
+  pickerCursor.style.left = `${pickerHSV.s * 100}%`;
+  pickerCursor.style.top = `${(1 - pickerHSV.v) * 100}%`;
+  const hex = hsvToHex(pickerHSV);
+  pickerPreview.style.backgroundColor = hex; pickerHex.value = hex;
+  pickerSV.setAttribute('aria-valuenow', String(Math.round(pickerHSV.v * 100)));
+}
+function commitColor(hex, delay = 80) {
+  if (!pickerTarget) return;
+  releaseAuto(pickerTarget);
+  state[colorKey(pickerTarget)] = hex.toUpperCase();
+  syncColorUI(); markCustomPaletteLabel(); scheduleQRUpdate(delay);
+}
+function closeColorPicker() {
+  picker.classList.add('hidden');
+  COLOR_TARGETS.forEach(t => $(`color-${t}`).setAttribute('aria-expanded','false'));
+  pickerTarget = null;
+}
+function openColorPicker(target) {
+  closePaletteMenu();
+  pickerTarget = target;
+  const trigger = $(`color-${target}`);
+  pickerHSV = hexToHsv(currentColor(target));
+  redrawPicker();
+  picker.classList.remove('hidden');
+  trigger.setAttribute('aria-expanded','true');
+  const rect = trigger.getBoundingClientRect(), w = picker.offsetWidth, h = picker.offsetHeight;
+  picker.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - w - 12))}px`;
+  picker.style.top = `${rect.bottom + h + 8 <= innerHeight ? rect.bottom + 8 : Math.max(12, rect.top - h - 8)}px`;
+}
+COLOR_TARGETS.forEach(t => $(`color-${t}`).addEventListener('click', e => {
+  e.stopPropagation();
+  pickerTarget === t && !picker.classList.contains('hidden') ? closeColorPicker() : openColorPicker(t);
+}));
+picker.addEventListener('click', e => e.stopPropagation());
+$('picker-close').addEventListener('click', closeColorPicker);
+document.addEventListener('click', closeColorPicker);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeColorPicker(); if (!$('lightbox').hidden) closeLightbox(); } });
+window.addEventListener('resize', () => { if (innerWidth !== lastWidth) { lastWidth = innerWidth; closeColorPicker(); } }); // ignora o teclado virtual no mobile
+window.addEventListener('scroll', e => { if (!picker.contains(e.target)) closeColorPicker(); }, true);
+function updateSVAt(e) {
+  const r = pickerSV.getBoundingClientRect();
+  pickerHSV.s = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  pickerHSV.v = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+  redrawPicker(); commitColor(hsvToHex(pickerHSV));
+}
+pickerSV.addEventListener('pointerdown', e => { pickerSV.setPointerCapture(e.pointerId); updateSVAt(e); });
+pickerSV.addEventListener('pointermove', e => { if (e.buttons === 1) updateSVAt(e); });
+pickerSV.addEventListener('keydown', e => {
+  const st = e.shiftKey ? 0.1 : 0.02;
+  if (e.key === 'ArrowLeft') pickerHSV.s = Math.max(0, pickerHSV.s - st);
+  else if (e.key === 'ArrowRight') pickerHSV.s = Math.min(1, pickerHSV.s + st);
+  else if (e.key === 'ArrowUp') pickerHSV.v = Math.min(1, pickerHSV.v + st);
+  else if (e.key === 'ArrowDown') pickerHSV.v = Math.max(0, pickerHSV.v - st);
+  else return;
+  e.preventDefault(); redrawPicker(); commitColor(hsvToHex(pickerHSV));
+});
+pickerHue.addEventListener('input', e => { pickerHSV.h = Number(e.target.value); redrawPicker(); commitColor(hsvToHex(pickerHSV)); });
+pickerHex.addEventListener('input', e => {
+  let v = e.target.value.trim(); if (v && !v.startsWith('#')) v = '#' + v;
+  if (/^#[0-9a-fA-F]{6}$/.test(v) && pickerTarget) {
+    pickerHSV = hexToHsv(v); commitColor(v);
+    pickerSV.style.backgroundColor = `hsl(${pickerHSV.h} 100% 50%)`;
+    pickerCursor.style.left = `${pickerHSV.s * 100}%`; pickerCursor.style.top = `${(1 - pickerHSV.v) * 100}%`;
+    pickerPreview.style.backgroundColor = v; pickerHue.value = String(Math.round(pickerHSV.h));
+  }
+});
+$('picker-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(pickerHex.value); showToast('Cor copiada'); } catch (_) { showToast('Selecione e copie o código hexadecimal'); }
+});
+COLOR_TARGETS.forEach(t => {
+  const input = $(`hex-${t}`);
+  input.addEventListener('input', () => {
+    let v = input.value.trim(); if (!v.startsWith('#')) v = '#' + v;
+    if (!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+    releaseAuto(t);
+    state[colorKey(t)] = v.toUpperCase();
+    syncColorUI(); markCustomPaletteLabel(); scheduleQRUpdate(80);
+    if (pickerTarget === t) { pickerHSV = hexToHsv(v); redrawPicker(); }
+  });
+  input.addEventListener('blur', () => { input.value = currentColor(t).toUpperCase(); });
+});
+['#000000','#FFFFFF','#10B981','#065F46','#1E293B','#1D4ED8','#9A3412','#881337','#FBBF24','#EF4444','#A855F7','#F8FAFC','#111816','#34D399','#EC4899','#6B7280'].forEach(hex => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.title = hex; b.setAttribute('aria-label', `Selecionar ${hex}`);
+  b.className = 'w-full aspect-square rounded-md border border-white/20 hover:scale-110 transition-transform';
+  b.style.backgroundColor = hex;
+  b.addEventListener('click', () => { pickerHSV = hexToHsv(hex); redrawPicker(); commitColor(hex, 0); });
+  $('picker-presets').appendChild(b);
+});
+$('bg-transparent').addEventListener('change', e => { state.bgTransparent = e.target.checked; syncColorUI(); markCustomPaletteLabel(); updateQR(); });
+$('outer-transparent').addEventListener('change', e => { state.outerTransparent = e.target.checked; syncColorUI(); updateQR(); });
+$('text-auto').addEventListener('change', e => {
+  if (!e.target.checked) state.textColor = state.dotsColor; // parte da cor atual, sem saltos
+  state.textAuto = e.target.checked; syncColorUI(); updateQR();
+});
+
+/* ---------- Geometria, margem, ECC ---------- */
+$('style-dots').addEventListener('change', e => { state.dotsType = e.target.value; updateQR(); });
+$('style-corners').addEventListener('change', e => { state.cornersType = e.target.value; updateQR(); });
+$('qr-margin').addEventListener('input', e => setLayout('margin', parseInt(e.target.value, 10), 65));
+$('qr-ecc').addEventListener('change', e => {
+  state.ecc = e.target.value;
+  if (state.logoDataUrl && state.ecc !== 'H') { state.ecc = 'H'; e.target.value = 'H'; showToast('Com logotipo, a correção máxima é necessária'); }
+  updateQR();
+});
+
+/* ---------- Composição: controles ---------- */
+$('presets').innerHTML = Object.entries(PRESETS).map(([id, p]) =>
+  `<button type="button" class="preset-btn" data-preset="${id}" aria-pressed="false"><svg viewBox="0 0 40 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p.icon}</svg><span>${p.label}</span></button>`).join('');
+const matchPreset = () => Object.keys(PRESETS).find(id => LAYOUT_KEYS.every(k => PRESETS[id][k] === state[k])) || null;
+function syncCompositionUI() {
+  $('qr-margin').value = state.margin; $('margin-val').textContent = `${state.margin}px`;
+  $('frame-radius').value = state.radius; $('radius-val').textContent = `${state.radius}%`;
+  $('frame-outer').value = state.outerMargin; $('outer-val').textContent = `${state.outerMargin}%`;
+  $('frame-bottom').value = state.extraBottom; $('bottom-val').textContent = `${state.extraBottom}%`;
+  $('text-size').value = state.textSize; $('text-size-val').textContent = state.textSize;
+  $('caption-font').value = state.captionFont; $('brand-style').value = state.brandStyle;
+  $('frame-shadow').setAttribute('aria-checked', String(state.shadow));
+  $('shadow-hint').textContent = state.outerMargin > 0 ? 'Destaca o cartão do fundo' : 'Aparece com margem externa';
+  const dividerUsable = state.brandPos === 'stack';
+  $('text-divider').setAttribute('aria-checked', String(state.divider));
+  $('text-divider').disabled = !dividerUsable;
+  $('divider-hint').textContent = dividerUsable ? 'Entre legenda e marca' : 'Só com a marca abaixo';
+  document.querySelectorAll('[data-seg]').forEach(group => group.querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', String(state[group.dataset.seg] === b.dataset.value))));
+  const active = matchPreset();
+  document.querySelectorAll('[data-preset]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === active)));
+  // o arco do canto invade o QR quando r·(1 − 1/√2) passa do respiro do QR
+  const qrPad = state.margin * 2 * REF / MARGIN_REF;
+  $('radius-warning').classList.toggle('hidden', state.radius * 2 * (1 - Math.SQRT1_2) <= qrPad + 0.5);
+}
+function setLayout(key, value, delay = 60) { state[key] = value; syncCompositionUI(); scheduleQRUpdate(delay); }
+$('presets').addEventListener('click', e => {
+  const btn = e.target.closest('[data-preset]');
+  if (!btn) return;
+  const p = PRESETS[btn.dataset.preset];
+  LAYOUT_KEYS.forEach(k => state[k] = p[k]);
+  syncCompositionUI(); updateQR();
+  showToast(`Modelo “${p.label}” aplicado`);
+});
+[['frame-radius','radius'],['frame-outer','outerMargin'],['frame-bottom','extraBottom'],['text-size','textSize']].forEach(([id, key]) =>
+  $(id).addEventListener('input', e => setLayout(key, parseInt(e.target.value, 10), 65)));
+$('caption-font').addEventListener('change', e => setLayout('captionFont', e.target.value, 0));
+$('brand-style').addEventListener('change', e => setLayout('brandStyle', e.target.value, 0));
+$('frame-shadow').addEventListener('click', () => setLayout('shadow', !state.shadow, 0));
+$('text-divider').addEventListener('click', () => setLayout('divider', !state.divider, 0));
+document.querySelectorAll('[data-seg]').forEach(group => group.addEventListener('click', e => {
+  const b = e.target.closest('button[data-value]');
+  if (b) setLayout(group.dataset.seg, b.dataset.value, 0);
+}));
+[['caption-text','caption','caption-count',90],['brand-text','brand','brand-count',48]].forEach(([id, key, counter, max]) =>
+  $(id).addEventListener('input', e => {
+    state[key] = e.target.value;
+    $(counter).textContent = `${[...e.target.value].length}/${max}`;
+    scheduleQRUpdate(160);
+  }));
+
+/* ---------- Logotipo ---------- */
+const LOGO_LABEL = 'Enviar imagem (PNG, SVG, JPG, WebP)';
+function syncLogoWarning() { $('logo-size-warning').classList.toggle('hidden', !state.logoDataUrl || state.logoSize <= 0.35); }
+$('input-logo').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!['image/png','image/jpeg','image/svg+xml','image/webp'].includes(file.type)) { showToast('Formato de imagem não permitido'); e.target.value = ''; return; }
+  if (file.size > 3 * 1024 * 1024) { showToast('A imagem deve ter até 3 MB'); e.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onerror = () => showToast('Não foi possível ler o logotipo');
+  reader.onload = ev => {
+    state.logoDataUrl = ev.target.result;
+    $('logo-filename').textContent = file.name;
+    $('btn-remove-logo').classList.remove('hidden'); $('logo-size-control').classList.remove('hidden');
+    if (state.ecc === 'L' || state.ecc === 'M' || state.ecc === 'Q') { state.ecc = 'H'; $('qr-ecc').value = 'H'; }
+    syncLogoWarning(); updateQR(); showToast('Logotipo aplicado ao QR Code');
+  };
+  reader.readAsDataURL(file);
+});
+$('btn-remove-logo').addEventListener('click', () => {
+  state.logoDataUrl = null; $('input-logo').value = ''; $('logo-filename').textContent = LOGO_LABEL;
+  $('btn-remove-logo').classList.add('hidden'); $('logo-size-control').classList.add('hidden');
+  syncLogoWarning(); updateQR();
+});
+$('logo-size').addEventListener('input', e => {
+  const pct = Number(e.target.value);
+  state.logoSize = pct / 100; $('logo-size-val').textContent = `${pct}%`;
+  syncLogoWarning(); scheduleQRUpdate(105);
+});
+
+/* ---------- Exportação ---------- */
+$('export-size').addEventListener('change', e => { state.exportSize = parseInt(e.target.value, 10); updateBadge(); });
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+document.querySelectorAll('[data-download]').forEach(btn => btn.addEventListener('click', async () => {
+  const format = btn.dataset.download;
+  try {
+    btn.disabled = true;
+    await ensureFonts();
+    let blob;
+    if (format === 'svg') blob = new Blob([await buildSVG(state.exportSize)], { type: 'image/svg+xml;charset=utf-8' });
+    else {
+      const { canvas } = await renderComposition(state.exportSize, format);
+      blob = await canvasToBlob(canvas, format === 'jpeg' ? 'image/jpeg' : 'image/png', 0.95);
+    }
+    downloadBlob(blob, `qr-studio-davi-caetano.${format}`);
+    showToast(`Download ${format.toUpperCase()} iniciado`);
+  } catch (error) {
+    console.error('Falha na exportação:', error);
+    showToast('Erro ao exportar. Tente novamente');
+  } finally { btn.disabled = false; }
+}));
+
+/* ---------- Restaurar padrão ---------- */
+$('btn-reset').addEventListener('click', () => {
+  closeColorPicker(); closePaletteMenu();
+  Object.assign(state, DEFAULTS);
+  setTab('url');
+  CONTENT_IDS.forEach(id => $(id).value = '');
+  $('wifi-enc').value = 'WPA'; $('wifi-hidden').checked = false;
+  $('style-dots').value = 'square'; $('style-corners').value = 'square';
+  $('qr-ecc').value = 'M'; $('export-size').value = '1024';
+  $('caption-text').value = ''; $('brand-text').value = ''; $('caption-count').textContent = '0/90'; $('brand-count').textContent = '0/48';
+  $('input-logo').value = ''; $('logo-filename').textContent = LOGO_LABEL;
+  $('btn-remove-logo').classList.add('hidden'); $('logo-size-control').classList.add('hidden');
+  $('logo-size').value = 35; $('logo-size-val').textContent = '35%';
+  document.querySelectorAll('.adv').forEach(a => setAdv(a, false));
+  syncLogoWarning(); syncColorUI(); syncCompositionUI(); markCustomPaletteLabel(); updateQR();
+  showToast('Configurações padrão restauradas');
+});
+
+/* ---------- Painéis recolhíveis ---------- */
+const ADV_GROUPS = {
+  'adv-look':  ['dotsType','cornersType','margin','ecc'],
+  'adv-frame': ['radius','outerMargin','extraBottom','shadow','outerTransparent','outerColor'],
+  'adv-text':  ['captionFont','brandStyle','align','brandPos','textSize','textAuto','divider']
+};
+function markDirty() { // ponto verde no painel quando algo dentro dele foi alterado
+  Object.entries(ADV_GROUPS).forEach(([id, keys]) => { $(id).parentElement.dataset.dirty = String(keys.some(k => state[k] !== DEFAULTS[k])); });
+}
+function setAdv(adv, open) {
+  adv.dataset.open = String(open);
+  adv.querySelector('.adv-toggle').setAttribute('aria-expanded', String(open));
+  adv.querySelector('.adv-body').inert = !open; // fechado: fora do Tab, mas os valores continuam valendo
+}
+function keepInPlace(el, ms = 380) { // evita o "pulo" da página quando outro painel fecha acima
+  const top0 = el.getBoundingClientRect().top, t0 = performance.now();
+  const step = now => { const d = el.getBoundingClientRect().top - top0; if (Math.abs(d) > 0.5) scrollBy(0, d); if (now - t0 < ms) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+document.querySelectorAll('.adv').forEach(adv => {
+  setAdv(adv, false);
+  const toggle = adv.querySelector('.adv-toggle');
+  toggle.addEventListener('click', () => {
+    const open = adv.dataset.open !== 'true';
+    document.querySelectorAll('.adv').forEach(other => { if (other !== adv && other.dataset.open === 'true') setAdv(other, false); });
+    setAdv(adv, open);
+    keepInPlace(toggle);
+  });
+});
+
+/* ---------- Prévia no celular: miniatura flutuante + ampliação ---------- */
+const mini = $('mini-preview'), lightbox = $('lightbox');
+const compactMQ = matchMedia('(max-width: 1023.98px)');
+let stageInView = true, typing = false, lbOpener = null;
+function syncMini() {
+  const show = compactMQ.matches && !stageInView && !typing && lightbox.hidden;
+  mini.classList.toggle('is-visible', show);
+  mini.setAttribute('aria-hidden', String(!show));
+  mini.tabIndex = show ? 0 : -1;
+}
+if ('IntersectionObserver' in window) new IntersectionObserver(([e]) => { stageInView = e.isIntersecting; syncMini(); }, { threshold: 0.2 }).observe($('stage'));
+compactMQ.addEventListener ? compactMQ.addEventListener('change', syncMini) : compactMQ.addListener(syncMini);
+// Com o teclado virtual aberto, a miniatura sai do caminho
+const isTypingField = el => el && el.matches && el.matches('input:not([type=checkbox]):not([type=range]):not([type=file]), textarea, select');
+document.addEventListener('focusin', e => { if (isTypingField(e.target)) { typing = true; syncMini(); } });
+document.addEventListener('focusout', e => { if (isTypingField(e.target)) { typing = false; setTimeout(syncMini, 150); } });
+
+function openLightbox() {
+  lbOpener = document.activeElement;
+  closeColorPicker();
+  lightbox.hidden = false;
+  document.documentElement.style.overflow = 'hidden';
+  requestAnimationFrame(() => lightbox.classList.add('is-open'));
+  $('lb-close').focus();
+  syncMini();
+}
+function closeLightbox() {
+  lightbox.classList.remove('is-open');
+  document.documentElement.style.overflow = '';
+  setTimeout(() => { lightbox.hidden = true; syncMini(); }, reduceMotion() ? 0 : 200);
+  if (lbOpener && lbOpener.focus && lbOpener !== mini) lbOpener.focus();
+}
+mini.addEventListener('click', openLightbox);
+$('btn-expand').addEventListener('click', openLightbox);
+$('lb-close').addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+lightbox.addEventListener('keydown', e => { // mantém o foco dentro da janela
+  if (e.key !== 'Tab') return;
+  const f = [...lightbox.querySelectorAll('button:not([disabled])')];
+  if (!f.length) return;
+  if (e.shiftKey && document.activeElement === f[0]) { f[f.length - 1].focus(); e.preventDefault(); }
+  else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { f[0].focus(); e.preventDefault(); }
+});
+
+/* ---------- Inicialização ---------- */
+setTab('url');
+syncColorUI();
+syncCompositionUI();
+renderPaletteOptions();
+updateQR();
+</script>
+</body>
+</html>
