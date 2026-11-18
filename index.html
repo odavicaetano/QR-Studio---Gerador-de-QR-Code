@@ -144,6 +144,40 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Mobile: prévia persistente e controles com rolagem própria.
+   Em telas largas, display:contents preserva as posições originais do grid. */
+.qr-controls-pane{display:contents}
+@media (max-width:1023.98px){
+  html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none}
+  body{min-height:0!important;height:100dvh;display:flex;flex-direction:column}
+  body>header{position:relative!important;top:auto!important;flex:0 0 auto;z-index:30}
+  body>main{flex:1 1 auto;min-height:0;overflow:hidden;padding:10px 12px 0!important}
+  body>main>.grid{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:10px;align-items:stretch}
+  body>main>.grid>aside{grid-column:1;grid-row:1;order:0;position:relative;min-width:0;min-height:0;z-index:2}
+  body>main>.grid>aside>section{padding:12px!important;gap:0}
+  body>main>.grid>aside>section>div:first-child{margin-bottom:8px!important}
+  body>main>.grid #stage{width:100%;max-width:min(39dvh,195px);margin:0 auto;transition:max-width .35s cubic-bezier(.22,1,.36,1)}
+  body>main>.grid #stage>.checkerboard{padding:10px!important;border-radius:16px}
+  body>main>.grid #qr-container{width:100%;max-width:100%}
+  body>main>.grid>aside section>div:has(> #downloads){margin-top:10px!important;padding-top:9px!important}
+  body>main>.grid>aside section>div:has(> #downloads)>div:first-child{margin-bottom:8px!important}
+  body>main>.grid #downloads button{min-height:34px}
+  .qr-controls-pane{display:flex;grid-column:1;grid-row:2;flex-direction:column;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding:1px 1px calc(18px + env(safe-area-inset-bottom,0px));gap:14px;scrollbar-gutter:stable}
+  .qr-controls-pane>section,.qr-controls-pane>div{width:100%;flex:none;min-width:0}
+  .qr-controls-pane>div{margin:0!important}
+  #mini-preview{display:none!important}
+}
+@media (max-width:1023.98px) and (max-height:680px){
+  body>main>.grid #stage{max-width:min(27dvh,150px)}
+  body>main>.grid>aside>section{padding:9px!important}
+  body>main>.grid>aside section>div:has(> #downloads){margin-top:7px!important;padding-top:7px!important}
+}
+@media (min-width:1024px){.qr-controls-pane{display:contents}}
+/* Crossfade da imagem final, sem movimentar o cartão nem afetar os downloads. */
+#qr-container img{transition:opacity 420ms cubic-bezier(.22,1,.36,1);backface-visibility:hidden}
+@media(prefers-reduced-motion:reduce){#qr-container img{transition:none!important}}
+
 </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -172,6 +206,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-5 sm:pt-7 pb-36 lg:pb-12">
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
 
+    <div class="qr-controls-pane" id="qr-controls-pane" aria-label="Informações e controles de personalização">
     <!-- 1 · Conteúdo -->
     <section class="anim-card-1 card p-4 sm:p-6 lg:col-span-7 lg:col-start-1 lg:row-start-1" aria-labelledby="t-content">
       <div class="flex items-center justify-between mb-4 gap-3">
@@ -181,39 +216,6 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <div id="tabs" class="grid grid-cols-5 gap-1 bg-bgBase/70 p-1 rounded-xl mb-4" role="tablist" aria-label="Tipo de QR Code"></div>
       <div id="panels"></div>
     </section>
-
-    <!-- 2 · Prévia (no celular vem logo após o conteúdo; no desktop fica fixa à direita) -->
-    <aside class="anim-preview lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24" aria-label="Pré-visualização e exportação">
-      <section class="card p-4 sm:p-6 flex flex-col items-center">
-        <div class="w-full flex items-center justify-between mb-4 gap-2">
-          <span class="sec-title"><i data-icon="eye" class="w-4 h-4"></i>Pré-visualização</span>
-          <div class="flex items-center gap-1.5">
-            <span id="preview-badge" class="hidden min-[360px]:inline whitespace-nowrap text-[11px] font-mono px-2 py-0.5 rounded-full bg-surfaceBase text-gray-400">1024 × 1024 px</span>
-            <button id="btn-expand" type="button" class="icon-btn" aria-label="Ampliar pré-visualização" title="Ampliar"><i data-icon="maximize" class="w-4 h-4"></i></button>
-          </div>
-        </div>
-        <div id="stage" class="stage-wrap anim-stage w-full max-w-[250px] sm:max-w-[322px]">
-          <div class="w-full rounded-2xl checkerboard p-4 sm:p-5 flex items-center justify-center overflow-hidden">
-            <div id="qr-container" class="flex items-center justify-center"></div>
-          </div>
-        </div>
-        <p id="contrast-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>Contraste baixo: a câmera pode não ler.</p>
-        <p id="radius-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>O arredondamento está cortando os cantos do QR.</p>
-
-        <div class="w-full mt-5 pt-4 border-t border-borderSubtle">
-          <div class="flex items-center justify-between mb-3 gap-2">
-            <span class="sec-title text-[13px]"><i data-icon="download" class="w-4 h-4"></i>Exportar</span>
-            <span class="flex items-center gap-2">
-              <label for="export-size" class="text-[11px] text-gray-400">Largura</label>
-              <select id="export-size" class="bg-surfaceBase border border-borderSubtle focus:border-emeraldMain rounded-lg px-2 py-1 text-xs font-mono text-white outline-none">
-                <option value="512">512 px</option><option value="1024" selected>1024 px</option><option value="2048">2048 px</option>
-              </select>
-            </span>
-          </div>
-          <div class="grid grid-cols-3 gap-2.5" id="downloads"></div>
-        </div>
-      </section>
-    </aside>
 
     <!-- 3 · Personalização -->
     <div class="lg:col-span-7 lg:col-start-1 lg:row-start-2 space-y-5">
@@ -422,6 +424,40 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
         </div>
       </section>
     </div>
+    </div>
+    <!-- 2 · Prévia (no celular vem logo após o conteúdo; no desktop fica fixa à direita) -->
+    <aside class="anim-preview lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24" aria-label="Pré-visualização e exportação">
+      <section class="card p-4 sm:p-6 flex flex-col items-center">
+        <div class="w-full flex items-center justify-between mb-4 gap-2">
+          <span class="sec-title"><i data-icon="eye" class="w-4 h-4"></i>Pré-visualização</span>
+          <div class="flex items-center gap-1.5">
+            <span id="preview-badge" class="hidden min-[360px]:inline whitespace-nowrap text-[11px] font-mono px-2 py-0.5 rounded-full bg-surfaceBase text-gray-400">1024 × 1024 px</span>
+            <button id="btn-expand" type="button" class="icon-btn" aria-label="Ampliar pré-visualização" title="Ampliar"><i data-icon="maximize" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div id="stage" class="stage-wrap anim-stage w-full max-w-[250px] sm:max-w-[322px]">
+          <div class="w-full rounded-2xl checkerboard p-4 sm:p-5 flex items-center justify-center overflow-hidden">
+            <div id="qr-container" class="flex items-center justify-center"></div>
+          </div>
+        </div>
+        <p id="contrast-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>Contraste baixo: a câmera pode não ler.</p>
+        <p id="radius-warning" class="hidden warn mt-3" role="status"><i data-icon="alert" class="w-4 h-4 shrink-0"></i>O arredondamento está cortando os cantos do QR.</p>
+
+        <div class="w-full mt-5 pt-4 border-t border-borderSubtle">
+          <div class="flex items-center justify-between mb-3 gap-2">
+            <span class="sec-title text-[13px]"><i data-icon="download" class="w-4 h-4"></i>Exportar</span>
+            <span class="flex items-center gap-2">
+              <label for="export-size" class="text-[11px] text-gray-400">Largura</label>
+              <select id="export-size" class="bg-surfaceBase border border-borderSubtle focus:border-emeraldMain rounded-lg px-2 py-1 text-xs font-mono text-white outline-none">
+                <option value="512">512 px</option><option value="1024" selected>1024 px</option><option value="2048">2048 px</option>
+              </select>
+            </span>
+          </div>
+          <div class="grid grid-cols-3 gap-2.5" id="downloads"></div>
+        </div>
+      </section>
+    </aside>
+
   </div>
 </main>
 
@@ -932,8 +968,8 @@ async function renderPreview(version) {
     qrContainer.appendChild(img);
     lastPreviewKey = key;
     void img.offsetWidth;
-    requestAnimationFrame(() => { img.style.opacity = '1'; previous.forEach(o => o.style.opacity = '0'); });
-    setTimeout(() => previous.forEach(o => { o.remove(); URL.revokeObjectURL(o.dataset.objectUrl); }), reduceMotion() ? 0 : 320);
+    requestAnimationFrame(() => requestAnimationFrame(() => { img.style.opacity = '1'; previous.forEach(o => o.style.opacity = '0'); }));
+    setTimeout(() => previous.forEach(o => { o.remove(); URL.revokeObjectURL(o.dataset.objectUrl); }), reduceMotion() ? 0 : 490);
     updateBadge();
     liveDone();
   } catch (error) {
@@ -1302,7 +1338,7 @@ function setAdv(adv, open) {
 }
 function keepInPlace(el, ms = 380) { // evita o "pulo" da página quando outro painel fecha acima
   const top0 = el.getBoundingClientRect().top, t0 = performance.now();
-  const step = now => { const d = el.getBoundingClientRect().top - top0; if (Math.abs(d) > 0.5) scrollBy(0, d); if (now - t0 < ms) requestAnimationFrame(step); };
+  const step = now => { const d = el.getBoundingClientRect().top - top0; if (Math.abs(d) > 0.5) { const scroller = compactMQ.matches ? $('qr-controls-pane') : window; scroller.scrollBy(0, d); } if (now - t0 < ms) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
 document.querySelectorAll('.adv').forEach(adv => {
@@ -1321,7 +1357,7 @@ const mini = $('mini-preview'), lightbox = $('lightbox');
 const compactMQ = matchMedia('(max-width: 1023.98px)');
 let stageInView = true, typing = false, lbOpener = null;
 function syncMini() {
-  const show = compactMQ.matches && !stageInView && !typing && lightbox.hidden;
+  const show = false; // A prévia principal permanece fixa no topo do mobile.
   mini.classList.toggle('is-visible', show);
   mini.setAttribute('aria-hidden', String(!show));
   mini.tabIndex = show ? 0 : -1;
