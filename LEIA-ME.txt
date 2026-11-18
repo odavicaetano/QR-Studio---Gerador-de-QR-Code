@@ -1,0 +1,14 @@
+QR Studio PWA
+
+Publique todo o conteúdo desta pasta no mesmo diretório do seu site em um servidor HTTPS.
+Arquivos: index.html, manifest.json, sw.js e pasta icons/.
+
+Para instalar: abra o site online, aguarde a primeira visita terminar de carregar e depois use Instalar aplicativo no Chrome/Edge/Android ou Compartilhar > Adicionar à Tela de Início no Safari/iOS.
+
+IMPORTANTE: HTML aberto por file:// não permite Service Worker. Use HTTPS ou localhost.
+
+O Service Worker armazena os scripts CDN e tenta guardar também todas as fontes para acesso offline. Após uma instalação concluída com sucesso, o gerador funciona offline; fontes específicas não pré-carregadas podem usar fontes substitutas. A exportação SVG com fontes adicionais pode utilizar substitutas quando offline.
+
+Não armazena configurações, QR Codes, textos ou dados de usuário. O cache contém apenas arquivos estáticos.
+
+Atualizações: ao publicar alterações, mude a versão CACHE e EXTERNAL_CACHE em sw.js.

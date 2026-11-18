@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#141817" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="QR Studio" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
 <title>QR Studio • Davi Caetano | Gerador de QR Code Personalizado</title>
 <meta name="description" content="Crie QR Codes personalizados com cores, estilos, logotipo e exportação gratuita em SVG, PNG e JPEG." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231C2220'/%3E%3Cpath fill='%2310B981' d='M6 6h8v8H6V6zm2 2v4h4V8H8zm10-2h8v8h-8V6zm2 2v4h4V8h-4zM6 18h8v8H6v-8zm2 2v4h4v-4H8zm10-2h3v3h-3v-3zm5 0h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3zm-2.5-2.5h3v3h-3v-3z'/%3E%3C/svg%3E" />
@@ -903,7 +910,7 @@ async function embedFonts(items) {
         return `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};src:url(data:${FONT_MIME[fmt] || 'font/woff2'};base64,${toBase64(buf)}) format('${fmt}');}`;
       }));
       return css.join('');
-    } catch (_) { return `@import url('${base}&display=swap');`; } // sem rede: referência externa
+    } catch (_) { return ''; } // offline: não injeta importação que dependa de rede
   }));
   return parts.sort((a, b) => b.startsWith('@import') - a.startsWith('@import')).join('');
 }
@@ -1402,6 +1409,17 @@ syncColorUI();
 syncCompositionUI();
 renderPaletteOptions();
 updateQR();
+</script>
+
+<script>
+/* PWA: registra o service worker somente em contexto seguro (HTTPS/localhost). */
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope:'./'})
+      .then(reg => { if (reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); })
+      .catch(err => console.warn('PWA: registro indisponível:', err));
+  });
+}
 </script>
 </body>
 </html>
