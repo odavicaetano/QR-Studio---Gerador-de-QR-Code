@@ -1,5 +1,5 @@
 /* QR Studio: PWA offline cache. Mude a versão ao publicar novas alterações. */
-const CACHE = 'qr-studio-static-v1';
+const CACHE = 'qr-studio-static-v6';
 const EXTERNAL_CACHE = 'qr-studio-dependencies-v1';
 const LOCAL_FILES = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 const DEPENDENCIES = [
